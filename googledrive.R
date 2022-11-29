@@ -30,4 +30,65 @@ drive_deauth()
 # Move the file into the 'data' folder in your project.
 
 
+library(dplyr)
+library(tidyr)
+library(purrr)
+require(ggplot2)
+mydata <- iris
+ggplot(iris, aes(, )) + geom_boxplot(aes(color=spray, fill=spray))
+
+
+ggplot(iris) + geom_bar(aes(x=Petal.Length, color=Species))
+
+ggplot(data = iris) +
+  geom_bar
+#######################################
+calculate <- function(x, y) {
+  count <- tapply(x, y, length)
+  mean1 <- tapply(x, y, mean)
+  SD <- tapply(x, y, sd)
+  SE <- SD / sqrt(length(count))
+  return=data.frame(SE, SD, mean1, count)
+}  
+########################################
+myp <- calculate(iris$Petal.Length, iris$Species)
+
+a <- iris %>%
+  group_by(Species) %>%
+  summarise( 
+    n=n(),
+    mmean=mean(Sepal.Length),
+    sd=sd(Sepal.Length)
+  ) %>%
+  mutate( se=sd/sqrt(n))  %>%
+  mutate( ic=se * qt((1-0.05)/2 + .5, n-1))
+
+plot(Sepal.Length~Species, data = iris)
+
+
+######################################
+
+a <- iris %>% 
+  group_by(Species)
+
+###########################################################33
+a <- iris %>% 
+  group_by(Species) %>% 
+  summarise(Mean.Petal.Length = mean(Petal.Length),
+            n.Petals = length(Petal.Length),
+            sd.Petal.Length = sd(Petal.Length),
+            SE.Petal.Length = sd(Petal.Length) / sqrt(length(Petal.Length)))
+
+
+ggplot(data =a) +
+  geom_bar(
+    mapping = aes(x=Species, y=mmean, fill=Species), stat = "identity",
+    width = 0.2 ) +
+  geom_errorbar(aes(x=Species, ymin=mmean-se, ymax=mmean+se), width=0.1, colour="orange", alpha=0.9, size=1.5) +
+  ggtitle("using standard error")   
+
+
+
+
+
 
