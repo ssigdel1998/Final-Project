@@ -1,0 +1,25 @@
+---
+title: "For the preliminary results"
+author: "Susmita Sigdel, Alphonsa Baby, Sunday Ojo"
+date: "2022-12-13"
+output: html_document
+---
+```{r}
+# adress of the spreadsheet
+"https://docs.google.com/spreadsheets/d/1WM6hDgwCFxbLpT37HLzU-iYZAEGBdHP6CpU8BDwWmZc/"
+# path to the data
+  'data/wstress.xlsx' 
+```
+
+
+```{r}
+wstress
+is.na(wstress$Soil_humidity)
+wstress2 <- wstress[!is.na(wstress$Soil_humidity),]
+wstress2 <- wstress2[!is.na(wstress2$Electrical_conductivity),]
+ggplot(wstress, aes(x = Soil_humidity, y = Electrical_conductivity, 
+                 color = Species)) +
+    geom_smooth() +
+    geom_point()
+```
+
