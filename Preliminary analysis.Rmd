@@ -4,22 +4,64 @@ author: "Susmita Sigdel, Alphonsa Baby, Sunday Ojo"
 date: "2022-12-13"
 output: html_document
 ---
+#To install and load the ggplot2 
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+```
+
+##Just know the location data 
 ```{r}
 # adress of the spreadsheet
 "https://docs.google.com/spreadsheets/d/1WM6hDgwCFxbLpT37HLzU-iYZAEGBdHP6CpU8BDwWmZc/"
 # path to the data
   'data/wstress.xlsx' 
 ```
+##Relation of various variables with the species 
 
+```{r}
+##Electrical Conductivity 
+wstress
+ggplot(wstress, aes(x = Species, y = Electrical_conductivity, 
+                 color = Species)) +
+    geom_smooth() +
+  geom_point()
+```
 
+```{r}
+#Soil Humidity
+wstress
+ggplot(wstress, aes(x = Species, y = Soil_humidity, 
+                 color = Species)) +
+    geom_smooth() +
+  geom_point()
+```
+
+##For relation between soil humidity and electrical conductivity 
+```{r}
+##For relation between soil humidity and electrical conductivity 
+wstress
+
+#in order to remove the empty cells 
+is.na(wstress$Soil_humidity)
+wstress2 <- wstress[!is.na(wstress$Soil_humidity),]
+wstress2 <- wstress2[!is.na(wstress2$Electrical_conductivity),]
+ggplot(wstress2, aes(x = Soil_humidity, y = Electrical_conductivity, 
+                 color = Species)) +
+    geom_smooth() +
+    geom_point()
+
+#to locate the place of the searched value  
+which(wstress$Electrical_conductivity==max(wstress2$Electrical_conductivity))
+
+```
+
+###Anova for variables 
 ```{r}
 wstress
 is.na(wstress$Soil_humidity)
 wstress2 <- wstress[!is.na(wstress$Soil_humidity),]
 wstress2 <- wstress2[!is.na(wstress2$Electrical_conductivity),]
-ggplot(wstress, aes(x = Soil_humidity, y = Electrical_conductivity, 
-                 color = Species)) +
-    geom_smooth() +
-    geom_point()
+fit <- aov(Species~Soil_humidity+Electrical_conductivity, data = wstress2)
 ```
 
