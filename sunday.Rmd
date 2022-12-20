@@ -1,0 +1,103 @@
+---
+title: "sunday"
+output:
+  pdf_document: default
+  html_document: default
+date: "2022-12-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Pacman package to load all the other packages
+```{r}
+#install.packages("pacman")
+
+pacman::p_load(dplyr, ggplot2, readxl, tidyverse,
+               googlesheets4, car, rstatix,FactoMineR, factoextra,lmerTest )
+
+```
+## Import and tidy the data
+
+```{r}
+##fromweb <-read_sheet
+('https://docs.google.com/spreadsheets/d/1WM6hDgwCFxbLpT37HLzU-iYZAEGBdHP6CpU8BDwWmZc')
+ 
+
+ws0 <- read_excel("data/wstress.xlsx")
+ws1 <- ws0
+
+
+#####transform to factor
+for(i in 1:7){
+  ws0[[i]] <- as.factor(ws0[[i]])
+}
+###check for success
+levels(ws0$Week) 
+############ rename group 2 amaranthus for distinction
+ws0$Species <- as.character(ws0$Species)
+ws0$Species <- ifelse(
+                ws0$Group == "G2" & ws0$Species == "Amaranthus retroflexus",
+                "G2retroflexus", ws0$Species)    
+ws0$Species <- as.factor(ws0$Species)
+```
+
+## Some graphs
+
+```{r cars}
+
+###############line graph to show over weeks effect of treatment
+ggplot(ws0, aes(x=Week, y=Plant_height, group=PlantId, col=Treatment)) +
+  geom_line()+
+  geom_point()+
+  facet_wrap(~Species)+ylim(0, 70)
+
+########################################################
+####boxplot of Data
+ggplot(ws0, aes(x=Treatment, y = Plant_height)) +
+  geom_boxplot(aes(fill=Species))+
+  facet_wrap(~ Species)+ylim(0, 60)
+
+##############################################################3
+
+```
+
+
+## Principal component analysis
+```{r}
+data <- ws0
+newV <- data%>%select_if(is.numeric)
+  
+res.pca <- PCA(newV, graph = FALSE)
+library("factoextra")
+eig.val <- get_eigenvalue(res.pca)
+eig.val
+
+fviz_eig(res.pca, addlabels = TRUE, ylim = c(0, 50))
+var <- get_pca_var(res.pca)
+var
+##-----------------------------------------------------------
+
+# Coordinates
+
+
+head(var$coord, 4)
+fviz_pca_var(res.pca, col.var = "black")
+head(var$contrib, 4)
+
+
+# Contributions of variables to PC1
+fviz_contrib(res.pca, choice = "var", axes = 1, top = 10)
+
+# Contributions of variables to PC2
+fviz_contrib(res.pca, choice = "var", axes = 2, top = 10)
+fviz_contrib(res.pca, choice = "var", axes = 1:2, top = 10)
+fviz_pca_var(res.pca, col.var = "contrib",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+)
+
+
+
+
+```
+
