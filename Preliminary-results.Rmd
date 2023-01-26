@@ -1,0 +1,460 @@
+---
+title: "Effect of Water Stress Treatment on Growth Parameters"
+author: "1. Sunday Ojo 2. Alphonsa Baby 3. Susmita Sigdel"
+date: '`r Sys.Date()`'
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+  html_document:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+
+
+# Title: Comparative study of effect of water stress in different growth parameters of cultivated crops and wild weed species 
+
+# Introduction 
+Water stress affects plant growth and development, including plant height, leaf length, width, dry matter, and chlorophyll content (Picón-Toro et al., 2012).  Leaves are essential indicators of growth and yield since they play a significant role in physiological processes (Zhang et al., 2015). The plant’s main response to water stress is to reduce its plant height, leaf area with increasing leaf numbers and thus improve water use efficiency (Ramezanifar et al., 2022). Photosynthesis is increased by higher chlorophyll levels and chlorophyll levels are higher in plants that are more resilient to water stress (Jangpromma et al., 2010).The chlorophyll content is a proxy for overall photosynthetic efficiency in plants and therefore is a good indicator of water stress tolerance in crop species (Hasanuzzaman et al.,  2022). 
+
+# Objectives
+To know the response of different cultivated and wild species to the water stress 
+To know the effect of water stress on different growth parameters of cultivated and wild species 
+
+## Learning Objectives 
+The main objective of this project is to get familiar with the R coding and use the R for the analysis of biological data.
+
+## Hypothesis 
+1. Ho = There will be no significant difference in the growth parameter of plants due to water stress 
+2. H1 = There will be significant difference in the growth parameter of plants due to water stress 
+
+# Materials and Methods
+## 2.1 Greenhouse Pot Experiment
+Solanum lycopersicum, Spinacea oleracea, Hordeum Vulgare, Beta vulgaris and Raphanus sativus  among the cultivated crop and Amaranthus retroflexus, Lolium perenne, Sonchus oleraceus, Portulaca oleracea among the weeds were selected for the pot experiment in the greenhouse. At first the Samplings were prepared in the normal condition. The plants were transplanted after two weeks with a single plant in the pot. Two hundred ten plants were transplanted. The 10X2X3X7 factorial design experiment was organized in a completely randomized design (CRD) in the controlled condition. After transplanting, the plants were watered up to field condition and left to grow. The plants in the control received weekly irrigation that reached up to the field´s capacity, the plants in the intermediate up to half the field´s capacity, and the stressed plants received half of the field´s capacity every two weeks.
+
+## 2.2 Measured Parameters
+Parameters like soil humidity, electrical conductivity, plant height, leaf number, leaf length, leaf width, leaf area, and chlorophyll content were measured in every two-week interval. Other parameters, aerial fresh weight, aerial dry weight, root length, roots fresh weight, and roots dry weight were measured at the end of the experiment on the 6th week of experiment setup.
+ 
+WET Sensor was used to monitor electrical conductivity and soil humidity. Electrical conductivity was measured in milli Siemens per centimeters (mS/cm) and soil humidity was recorded in percentages. Using a SPAD meter, the amount of chlorophyll was calculated in micromoles per square meter (mmolem-2). Using a digimizer, we measured the length of the roots and the area of the leaves. Fresh weight was calculated using a weighing machine and the dry weight was calculated after the contents had been dried in the oven for more than 24 hours.
+
+## 2.3 Statistical Analysis
+Google Sheet was used to enter the data. All statistical analysis was conducted in R Studio version 4.2.1. Parametric data that meet the assumption of the analysis of variance were subjected to factorial analysis of variance (ANOVA) using the linear mixed model. Model residuals were checked for normality using the shapiro Test. Post hoc means separation was achieved using Tukey Honestly significant difference (TukeyHSD) with the aid of the agricolae package in R. Missing data were drop or imputed using column means prior to analysis.
+
+
+```{r}
+#install.packages("pacman")
+# Pacman package to load all the other packages
+pacman::p_load(dplyr, ggplot2, readxl, tidyverse,agricolae,
+               googlesheets4, car, rstatix,FactoMineR,writexl,missMDA, 
+               factoextra,lmerTest, ggpubr, tidyverse,agricolae, 
+                kableExtra)
+
+```
+# Import and tidy the data
+
+```{r}
+##fromweb <-read_sheet
+('https://docs.google.com/spreadsheets/
+#d/1WM6hDgwCFxbLpT37HLzU-iYZAEGBdHP6CpU8BDwWmZc')
+ 
+
+ws0 <- read_excel("data/wstress.xlsx")
+ws1 <- ws0
+
+
+#####transform to factor
+for(i in 1:7){
+  ws0[[i]] <- as.factor(ws0[[i]])
+}
+###check for success
+levels(ws0$Week) 
+############ rename group 2 amaranthus for distinction
+#ws0$Species <- as.character(ws0$Species)
+#ws0$Species <- ifelse(
+                #ws0$Group == "G2" & ws0$Species == "Amaranthus retroflexus",
+                #"G2retroflexus", ws0$Species)    
+#ws0$Species <- as.factor(ws0$Species)
+
+var.numeric <- c(
+  "Soil_humidity", "Electrical_conductivity", "Plant_height", 
+  "Leaf_number", "Leaf_length", "Leaf_width", "Leaf_area",
+  "Chlorophyll_content",  
+  "Aerial_fresh_weight", "Aerial_dry_weight",
+  "Root_length", "Roots_fresh_weight", "Roots_dry_weight")
+
+for (i in var.numeric) {
+  
+  ws0[[i]] <- as.numeric(ws0[[i]])
+}
+
+levels(ws0$Treatment) <- c("Control", "Intermediate", "WaterStress")
+#class(ws0$Species)  #to verify if conversion to factor was succesful
+
+```
+
+# Variation of some variables accross weeks
+
+```{r cars}
+## create a summmary table for the some variable, to be used in plot
+sumtable <- ws0%>% group_by(Species, Treatment, Week) %>% 
+            summarize(Plant_Height=mean(Plant_height),
+                      Leaf_Length=mean(Leaf_length), 
+                      Leaf_Width=mean(Leaf_width), 
+                      chlorophyll=mean(Chlorophyll_content))
+
+
+###########line graph to show over weeks effect of treatment on selected va
+#riable
+pheight <- ggplot(sumtable, aes(x=Week, y=Plant_Height, group=Species,
+  col=Species))+
+  geom_line(size=1)+
+  geom_point()+
+  facet_wrap(~Treatment)+ggtitle("Fig.1 line graph of Plant Height")  
+
+pheight
+
+llength <- ggplot(sumtable, aes(x=Week, y=Leaf_Length, group=Species,
+  col=Species))+
+  geom_line(size=1)+
+  geom_point()+
+  facet_wrap(~Treatment)+ggtitle("Fig.2 line graph of Leave Length")
+llength
+lwidth <- ggplot(sumtable, aes(x=Week, y= Leaf_Width, group=Species,
+  col=Species))+
+  geom_line(size=1)+
+  geom_point()+
+  facet_wrap(~Treatment)+ggtitle("Fig.3 line graph of Leave Width")
+
+lwidth
+
+sumtable <- na.omit(sumtable) ###to exclude NA values from chlorophyll variable
+chlorophyll <- ggplot(sumtable, aes(x=Week, y=chlorophyll, group=Species,
+  col=Species))+
+  geom_line(size=1)+
+  geom_point()+
+  facet_wrap(~Treatment)+ggtitle("Fig.4 line graph of Chlorophyll Content")
+
+chlorophyll
+
+
+ ##############################################################3
+
+```
+
+
+# Principal component analysis
+```{r}
+data <- ws0 %>% filter(Week=="W6")
+
+#import the dataset to be used for the principal component analysis
+a <- read.csv("data/myframe.csv", header=TRUE, row.names = "PlantId")
+##PlantId has been used as the rowname in order to display individual point in
+
+
+newV <- names(a) ##Create a new vector with the names of the variables
+####conduct the PCA Analysis
+res.pcac <- PCA(a, ncp = 2, graph = FALSE) 
+
+##----------------------------------------------------
+```
+
+
+# Scree Plot
+The Eigenvalues are shown visually in the scree plot. The graph was created to show how many significant elements there were in the datasets. In this instance, the first two principal components together account for more than 60%. As a result, just the first "major component" was chosen to be taken into consideration when looking at the factors that best explain the water stress that the plants experienced.
+
+```{r}
+eig.val <- get_eigenvalue(res.pcac)
+eig.val
+
+## Scree plot show the amount of variable explained by each component
+scree <- fviz_eig(res.pcac, addlabels = TRUE, ylim = c(0, 50))
+scree
+##-----------------------------------------------------------
+```
+
+## Contibution 
+Variables are displayed together with their percentage contributions to each principle component in the principal component analysis bar plots. Aerial dry weight, leaf area, fresh aerial weight, leaf breadth, and root lengths contribute more in the first dimension, and in the second, leaf length and root dry weight are more important. As a result, we can infer that these characteristics may be crucial for describing plant stress.
+
+
+
+```{r}
+# Contributions of variables to PC1
+c1 <- fviz_contrib(res.pcac, choice = "var", axes = 1, top = 10)
+c1
+# Contributions of variables to PC2
+c2 <- fviz_contrib(res.pcac, choice = "var", axes = 2, top = 10)
+c2
+
+```
+
+## PCA Biplot
+To find the key factors that best explain the changes in the data, a Principal Component Analysis biplot was created. These are the groups of observations that share a common trait. The many species are represented by the points. The lines with greater lengths are the ones that are primarily responsible for the species' variation. The biplot demonstrates how the species varies as a result of several parameters. Different species exhibit their responses to water stress in different ways. For instance, Hordeum vulgare differs primarily as a result of the leaf length.
+
+
+```{r}
+#### Plot the biplot
+print1 <- fviz_pca_biplot(res.pcac,
+# Fill individuals by groups
+geom.ind ="point",
+pointshape = 21,
+pointsize = 2.0,
+addEllipses = TRUE,
+fill.ind = data$Species,
+col.ind ="black",
+# Color variable by groups
+col.var =newV,
+legend.title = list(fill = "Species"),
+repel = TRUE # Avoid label overplotting
+)+
+ggpubr::fill_palette("jco")+ # Indiviual fill color
+ggpubr::color_palette("npg") # Variable colors
+
+print1 
+
+```
+
+
+## Cluster Analysis
+clusters are visible here, and for each cluster, a different set of variables determines the variance of the clusters. For cluster 1, for instance, the relevant variables are the number of leaves, their width, the weight of the roots and the weight of the aerial parts. Beta vulgaris is the dominant species found in this cluster. This indicates that the Beta vulgaris' response to water stress depended significantly on the number of leaves, the size of the leaves, the fresh weight of the roots, and the fresh weight of the aerial parts.
+
+```{r}
+#- Conduct the Cluster analysis using the principal component results
+
+res.hcpc <- HCPC (res.pcac, graph = FALSE)
+
+cluster <- fviz_cluster(res.hcpc,
+repel = FALSE, # Avoid label overlapping
+show.clust.cent = TRUE, # Show cluster centers
+palette = "jco", 
+ggtheme = theme_minimal(),
+main = "Factor map"
+)
+
+cluster
+### The most important variable contributing to cluster
+mycl <- res.hcpc$desc.var$quanti
+mycl
+### store a dataframe containing the oringinal variable and assigned cluster
+b <- res.hcpc$data.clust
+
+
+#NEXT we
+###combine with the species and the treatment column with the dataframe
+#to see the cluster where all the Species in the control treatment are7
+
+comb <- b %>% mutate(Species=data$Species, Treatment=data$Treatment) %>% 
+              arrange(Species)
+
+filt <- comb[, -c(1:9)]
+
+#c1 <-filt %>% filter(clust=="3")
+
+#summary(c1$Species)
+## inference from the cluster analysis result in filt dataframe
+
+# Most of the species clustered together without separation of individuals under
+# different treatment
+# Species with similar characteristics clustered together
+
+```
+
+
+
+# Anova analysis and Result
+According to the anova table, leaf length is significant for five species, leaf area for six species, aerial fresh weight for eight species, aerial dry weight for seven species, roots fresh weight for four species, and roots dry weight for three species are all significant. In this instance as well, the difference between cultivated species and weeds in the treatment's impact on some growth parameters is quite substantial. Portulaca oleracea, Raphanus sativus, and Solanum lycopersicum shows the significance in same parameters. 
+
+```{r}
+### create a vector with names of variables for which anova analysis would be 
+### conducted
+variables <- c("Soil_humidity", "Plant_height", 
+              "Leaf_width", "Leaf_number", "Leaf_length",
+               "Leaf_area","Aerial_fresh_weight","Aerial_dry_weight", 
+               "Root_length", "Roots_fresh_weight", "Roots_dry_weight")
+class(variables)
+
+####### We create an empty dataframe where the results of the Anova would be 
+####### written
+
+Tr <- levels(as.factor(ws0$Treatment))
+
+mean.st <- paste("mean", Tr)  ##this will be used to store the mean
+
+class(Tr)
+column.names<-c("Species", "variables", mean.st)
+sp <- levels(as.factor(ws0$Species))
+
+rows <- length(sp) * length(variables) 
+
+results <- as.data.frame(matrix(nrow=rows,  ncol=length(column.names)) )
+names(results) <- column.names
+
+results[, "pvalue"] = NA   ## create additional column to store the p value
+                           ## with initial value NA
+results[, "significance"] = NA #create additional column to store the sig
+                           ## with initial value NA
+
+
+
+ss0 <- ws0%>%filter(Week=="W6") ###subset the week 6 data from the dataframe
+## sst <- ws0[ws0$Week=="W6", ]
+
+
+
+i <- sp[1]
+j <- variables[1]
+k <- 1
+
+
+
+for(i in sp ){
+  for(j in variables){
+    
+    
+    ss1 <- ss0[ss0$Species==i, ]
+    ss1 <- ss1 %>%drop_na_(j) ## remove NA from the new subset with only one sp
+    lm.1 <- lm(ss1[[j]]~Treatment, data=ss1 ) # fit the lm
+    sumoa <- anova(lm.1)                      #create anova model
+    pvalue <- sumoa$`Pr(>F)`[1]              #extract the pvalue
+    hsd <- HSD.test(lm.1, "Treatment")      #conduct poshoc test
+    saf <- hsd$means                        ##store the mean and standard error
+    saf1 <- saf[, 1]                        ##extract only the mean
+    safs <- signif(saf1, digits = 3)        ###reduce the mean to 3 decimal p
+    saf2 <- saf[, 2]                        ##extract the sd
+    safs2 <- signif(saf2, digits = 3)       ## reduce sd to 3 dcp
+    letter <- hsd$groups$groups[order(rownames(hsd$groups))] 
+    results$Species[k] <- i
+    results$variables[k] <- j
+    ## write into result the mean, letter from posthoc  and sd
+    results [k, mean.st]   <- paste(safs, "+", safs2, letter) 
+    results[k, "pvalue"] <- pvalue #### write the pvalue
+     k <- k+1
+  
+  }
+  
+}
+
+###check the pvalue column, then print significance in sig column if p<0.05
+results$significance <- ifelse(results$pvalue >= 0.05, "N.S", "***")
+
+##reduce the p value column to 23 decimal places
+results$pvalue <-format(results$pvalue, scientific = TRUE, digit=3)
+
+#### Combine pvalue and significance in a single column
+results$pvalue <- paste(results$pvalue,  results$significance)
+
+### subset the significant variables
+grp1 <- results %>% filter(significance=="***")
+
+##create a new frame with only the species, variable and pvalue
+finalframe <- grp1[, -7]
+
+```
+ 
+
+
+
+## Boxplot showing the results of the Anova
+```{r}
+
+###_________________________________________________
+###using slightly modified version of the previous code
+### anova is created to get the pvalu, max and a plot is created
+ k <- 1
+ newv <- c("Leaf_area", "Leaf_number", "Roots_fresh_weight", "", "Aerial_fresh_weight","Aerial_dry_weight")
+ vec <- as.vector(newV)
+for(i in sp ){
+  for(v in  vec){
+    
+    
+    ss1 <- ss0[ss0$Species==i, ]
+    ss1 <- ss1 %>%drop_na_(v)
+    levels(ss1$Treatment) <- c("Control", "Intermediate", "WaterStress")
+    lm.1 <- aov(ss1[[v]]~Treatment, data=ss1 )
+    sumoa <- anova(lm.1) #create anova model
+    pvalue <- sumoa$`Pr(>F)`[1]  
+    hsd <- HSD.test(lm.1, "Treatment")
+    maxi <- hsd$means$Max
+    ylabv <- names(ss1[v])
+    letter <- hsd$groups$groups[order(rownames(hsd$groups))] 
+    p <-  ggplot(ss1, aes(x=Treatment, y=ss1[[ylabv]])) +
+    geom_boxplot(aes(x=Treatment, y=ss1[[ylabv]], fill=Treatment), outlier.shape=1)+
+    ylab(ylabv)+stat_summary(fun=mean, geom="point", size=2)+
+    annotate("text", x = 1:3, y =0.5+maxi, label = letter, size=5)+
+    theme_bw()+ggtitle(i)
+    p <- p+facet_wrap(~Species)
+    nameofp <- paste(i, ylabv) 
+    ggsave(path="figs", plot =p, file = paste(i, ylabv , ".jpg"), dpi=400)
+    
+    if(pvalue<0.05) {
+       print(p)
+    }
+    
+    k <- k+1
+    
+  }
+  
+}
+
+### Only boxplot where pvalue<0.05 is shown. However, all boxplots are in 
+### figs folder
+```
+
+## The ANOVA Table
+```{r}
+
+ kable(finalframe, format = "latex", booktabs = TRUE) %>%
+          kable_styling(latex_options = "scale_down")
+
+
+#write_xlsx(finalframe, "final.xlsx")
+
+
+```
+
+# Correlation Between Soil humidity and Electrical conductivity
+The scatterplot in the image below depicts the correlation between electrical conductivity and soil humidity. Because the data points are clustered around the line in the figure, there is a higher correlation between soil humidity and electrical conductivity. The value of R also demonstrates how well the data match the model.
+
+
+```{r}
+d2 <- data[, c("Electrical_conductivity", "Soil_humidity")]
+dzclean <-na.omit(d2)    ### some groups have missing data
+dcpr <- dzclean[, c("Electrical_conductivity", "Soil_humidity")]
+
+sus <- ggscatter(dzclean, x = "Electrical_conductivity",  # correlation plot
+                 y = "Soil_humidity", 
+                add = "reg.line", conf.int = TRUE, 
+                cor.coef = TRUE, cor.method = "pearson",
+                xlab = "Electrical_conductivity", 
+                ylab = "Soil_humidity")
+sus
+```
+
+
+# Conclusion 
+
+For all the same conditions, not all species react to water stress in the same way. Consequently, various parameters are required for the evaluation to explain their response. From the cluster analysis, the parameters measured from the root and the leaf like root length, leaf length, and root weight are the most important variable defining clusters for most of the species, and may therefore can be used in future studies of plant response to water stress. In most species, leaf area, aerial fresh weight, and aerial dry weight play significant roles in predicting how they will react to the treatment 
+The treatments are more significant in crop species compared to weed species, indicating that cultivated plants are more susceptible to the water stress than weeds.
+
+
+# References 
+Picón-Toro, J., González-Dugo, V., Uriarte, D., Mancha, L., & Testi, L. (2012). Effects of canopy size and water stress over the crop coefficient of a "Tempranillo" vineyard in south-western Spain. Irrigation Science, 30(5), 419-432. doi:10.1007/s00271-012-0351-3
+Zhang, J., Sha, Z., Zhang, Y., Bei, Z., & Cao, L. (2015). The effects of different water and nitrogen levels on yield, water and nitrogen utilization efficiencies of spinach ( Spinacia oleracea L.). Canadian Journal of Plant Science, 95(4), 671–679. doi:10.4141/cjps-2014-184
+Ramezanifar, H., Yazdanpanah, N., Golkar Hamzee Yazd, H., Tavousi, M., & Mahmoodabadi, M. (2022). Spinach Growth Regulation Due to Interactive Salinity, Water, and Nitrogen Stresses. Journal of Plant Growth Regulation, 41(4), 1654–1671.doi:10.1007/s00344-021-10407-1
+Jangpromma, N., Songsri, P., Thammasirirak, S., & Jaisil, P. (2010). Rapid assessment of chlorophyll content in surgarcane using a SPAD chlorophyll meter across different water stress conditions. Asian Journal of Plant Sciences, 9(6), 368-374. doi:10.3923/ajps.2010.368.374
+Hasanuzzaman, M., Shabala, L., Brodribb, T. J., Zhou, M., & Shabala, S. (2022). Understanding the role of physiological and agronomical traits during drought recovery as a determinant of differential drought stress tolerance in barley. Agronomy, 12(9).doi: 10.3390/agronomy12092136
+
+
+
+
